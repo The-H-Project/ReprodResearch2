@@ -19,7 +19,8 @@ library(data.table)
 library(readr)
 dataset <- data.table(read_csv('../repdata-data-StormData.csv.bz2'))
 
-SummaryStatistics <- dataset[, lapply(.SD, sum, na.rm=TRUE), by=EVTYPE, .SDcols=c('FATALITIES', 'INJURIES', 'PROPDMG', 'CROPDMG')]
+SummaryStatistics <- dataset[, lapply(.SD, sum, na.rm=TRUE), by=EVTYPE, 
+                     .SDcols=c('FATALITIES', 'INJURIES', 'PROPDMG', 'CROPDMG')]
 ```
 
 ## 
