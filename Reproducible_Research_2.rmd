@@ -3,6 +3,7 @@ title: "Reproducible Research Assignment 2"
 author: "Project_H"
 date: "March 15, 2016"
 output: html_document
+keep_md: true
 ---
 
 This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
@@ -10,12 +11,15 @@ This is an R Markdown document. Markdown is a simple formatting syntax for autho
 When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
 ## Data Processing
-readr's read_csv is used to load the data, as it is an order of magnitude faster than the base read.csv. Unfortunately, the data file crashes data.table's fread function.
+Loading data: readr's read_csv is used to load the data, as it is an order of magnitude faster than the base read.csv. Unfortunately, the data file crashes data.table 1.9.6's fread function.
+
+Summarizing data: For each Event Type, sum the fatalities, injuries, property damage, and crop damage.
 ```{r load_data}
 library(data.table)
 library(readr)
-dataset <- data.table(read_csv('../repdata-data-StormData.csv'))
+dataset <- data.table(read_csv('../repdata-data-StormData.csv.bz2'))
 
+SummaryStatistics <- dataset[, lapply(.SD, sum, na.rm=TRUE), by=EVTYPE, .SDcols=c('FATALITIES', 'INJURIES', 'PROPDMG', 'CROPDMG')]
 ```
 
 ## 
