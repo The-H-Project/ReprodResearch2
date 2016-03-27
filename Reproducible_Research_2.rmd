@@ -19,6 +19,9 @@ library(data.table)
 library(readr)
 dataset <- data.table(read_csv('../repdata-data-StormData.csv.bz2'))
 
+# Convert all EventTypes to upper case before summarizing them, as an initial method of reducing data variation in EventTypes.
+dataset[,EVTYPE := toupper(EVTYPE)]
+
 SummaryStatistics <- dataset[, lapply(.SD, sum, na.rm=TRUE), by=EVTYPE, 
                      .SDcols=c('FATALITIES', 'INJURIES', 'PROPDMG', 'CROPDMG')]
 ```
