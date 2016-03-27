@@ -19,11 +19,24 @@ library(data.table)
 library(readr)
 dataset <- data.table(read_csv('../repdata-data-StormData.csv.bz2'))
 
-# Convert all EventTypes to upper case before summarizing them, as an initial method of reducing data variation in EventTypes.
-dataset[,EVTYPE := toupper(EVTYPE)]
-
-SummaryStatistics <- dataset[, lapply(.SD, sum, na.rm=TRUE), by=EVTYPE, 
+# Extract a summary of storm data events.
+StormSum1 <- dataset[, lapply(.SD, sum, na.rm=TRUE), by=EVTYPE, 
                      .SDcols=c('FATALITIES', 'INJURIES', 'PROPDMG', 'CROPDMG')]
+
+# Convert all EventTypes to upper case to reduce variation in Event Types
+StormSum1[,EVTYPE := toupper(EVTYPE)]
+
+# Get rid of spelling variations.
+StormSum1[EVTYPE == 'AVALANCE',  EVTYPE := 'AVALANCHE']
+StormSum1[EVTYPE == 'BEACH EROSIN',  EVTYPE := 'BEACH EROSION']
+StormSum1[EVTYPE == 'TORNDAO',  EVTYPE := 'TORNADO']
+
+# Melt the summary to prepare for re-calcuating the sums for each Event Type.
+StormMelt <- melt.data.table(StormSum1, id.vars = 'EVTYPE', variable.name = 'DamageType')
+
+# Redo the summary table.
+StormSum2 <- dcast(StormMelt, EVTYPE ~ DamageType, value.var = 'value', fun.aggregate = sum )
+
 ```
 
 ## 
