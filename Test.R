@@ -1,22 +1,5 @@
----
-title: "Reproducible Research Assignment 2"
-author: "Project_H"
-date: "March 15, 2016"
-output: html_document
-keep_md: true
----
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-## Data Processing
-Loading data: readr's read_csv is used to load the data, as it is an order of magnitude faster than the base read.csv. Unfortunately, the data file crashes data.table 1.9.6's fread function.
-
-Summarizing data: For each Event Type, sum the fatalities, injuries, property damage, and crop damage.
-```{r load_data}
-require(data.table)
-require(readr)
+library(data.table)
+library(readr)
 dataset <- data.table(read_csv('../repdata-data-StormData.csv.bz2'))
 
 # Extract a summary of storm data events, a count of each EventType, and combine the two tables. EVCOUNT is forced to double precision, to suppress warning messages from  melt.data.table.
@@ -61,9 +44,3 @@ StormMelt <- melt.data.table(StormSum2, id.vars = 'EVTYPE', variable.name = 'Dam
 
 # Redo the summary table, which essentially collapses duplicate rows created by correcting spelling and punctuation variations in EventType.
 StormSum3 <- dcast(StormMelt, EVTYPE ~ DamageType, value.var = 'value', fun.aggregate = sum )
-
-```
-
-## 
-
-
