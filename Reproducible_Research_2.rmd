@@ -45,13 +45,23 @@ StormSum2[EVTYPE == 'COLD TEMPERATURES',  EVTYPE := 'COLD TEMPERATURE']
 StormSum2[EVTYPE == 'TORNDAO',  EVTYPE := 'TORNADO']
 StormSum2[EVTYPE == 'WAYTERSPOUT',  EVTYPE := 'WATERSPOUT']
 StormSum2[EVTYPE == 'WET MICOBURST',  EVTYPE := 'WET MICROBURST']
-StormSum2[EVTYPE %like% 'WINTER WEATHER( |/)MIX', EVTYPE := 'WINTER WEATHER MIX']
+StormSum2[EVTYPE %like% 'WINTER WEATHER( |/)MIX', EVTYPE := 'WINTRY MIX']
 StormSum2[EVTYPE %like% 'WINTE?RY MIX', EVTYPE := 'WINTRY MIX']
+StormSum2[EVTYPE %like% 'WINTER STORM( |/)HIGH WINDS*', EVTYPE := 'WINTER STORM HIGH WINDS']
 StormSum2[EVTYPE == 'UNSEASONABLE COLD',  EVTYPE := 'UNSEASONABLY COLD']
 
+
 # Goal: THUNDERSTORM WINDS. Lots of different patterns in Grep.
-# Starting with TH and ending in ND or DS or DSS or ND. or NDS or INS. 
+# Starting with TH and ending in ND or DS or DSS or ND. or NDS or INS.
+# Metacharacter: . = any character
+#              : * = Match the preceding element 0 or more times
+#              : ? = Match the preceding element 0 or 1 time.
 StormSum2[EVTYPE %like% '^TH.*?(ND$|DS[S]*$|ND[S]*\\.$|INS)', EVTYPE := 'THUNDERSTORM WINDS']
+StormSum2[EVTYPE %like% 'THUNDERSTORMW', EVTYPE := 'THUNDERSTORM WINDS']
+# Starting with 'TSTM W' and ending IN ND, NDS
+StormSum2[EVTYPE %like% '^TSTM W.*?(ND$|DS$)', EVTYPE := 'THUNDERSTORM WINDS']
+StormSum2[EVTYPE %like% '^TSTMW', EVTYPE := 'THUNDERSTORM WINDS']
+
 
 # setkey(StormSum2, EVTYPE)
 # StormSum2[StormSum2[EVTYPE %like% '^TH.'][EVTYPE %like% 'ND$|DS$'], EVTYPE := 'THUNDERSTORM WINDS']
