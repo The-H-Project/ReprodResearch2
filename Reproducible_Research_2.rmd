@@ -38,11 +38,14 @@ StormSum2 <- StormSum1[StormCount1, on='EVTYPE']
 # StormSum4 <- StormSum2 
 StormSum2[,EVTYPE := toupper(EVTYPE)]
 
-# Get rid of spelling and punctuation variations.
+# Get rid of spelling and punctuation variations. Double escapes for literals are required because the regular expression is passed through data.table to grepl
 StormSum2[EVTYPE == 'AVALANCE',  EVTYPE := 'AVALANCHE']
 StormSum2[EVTYPE == 'BEACH EROSIN',  EVTYPE := 'BEACH EROSION']
 StormSum2[EVTYPE == 'COLD TEMPERATURES',  EVTYPE := 'COLD TEMPERATURE']
+StormSum2[EVTYPE %like% '^GUSTY WIND[S]*$', EVTYPE := 'GUSTY WIND']
+StormSum2[EVTYPE %like% '^LI.*?ING$', EVTYPE := 'LIGHTNING']
 StormSum2[EVTYPE %like% '^WILD.*?FIRES*$', EVTYPE := 'WILDFIRES']
+StormSum2[EVTYPE %like% '^STRONG WIND[S]*$', EVTYPE := 'STRONG WIND']
 StormSum2[EVTYPE == 'TORNDAO',  EVTYPE := 'TORNADO']
 StormSum2[EVTYPE %like% '^WATER *SPOUT[-/S]*$', EVTYPE := 'WATERSPOUT']
 StormSum2[EVTYPE == 'WAYTERSPOUT',  EVTYPE := 'WATERSPOUT']
@@ -53,8 +56,9 @@ StormSum2[EVTYPE %like% 'WINTE?RY MIX', EVTYPE := 'WINTRY MIX']
 StormSum2[EVTYPE %like% 'WINTER STORM( |/)HIGH WINDS*', EVTYPE := 'WINTER STORM HIGH WINDS']
 StormSum2[EVTYPE == 'WINTER STORMS', EVTYPE := 'WINTER STORM']
 StormSum2[EVTYPE == 'UNSEASONABLE COLD',  EVTYPE := 'UNSEASONABLY COLD']
-
-
+StormSum2[EVTYPE %like% '^HAIL.*?( |0\\.|0)75$', EVTYPE := 'HAIL 075']
+StormSum2[EVTYPE %like% '^HAIL 1[\\.]*75[\\)]*$', EVTYPE := 'HAIL 175']
+StormSum2[EVTYPE %like% '^HAIL.*?88$', EVTYPE := 'HAIL 088']
 
 # Goal: THUNDERSTORM WINDS. Lots of different patterns in Grep.
 # Starting with TH and ending in ND or DS or DSS or ND. or NDS or INS.
