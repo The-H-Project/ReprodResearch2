@@ -2,8 +2,9 @@
 title: "Reproducible Research Assignment 2"
 author: "Project_H"
 date: "March 15, 2016"
-output: html_document
-keep_md: true
+output: 
+  html_document:
+    keep_md: yes
 ---
 
 This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
@@ -11,10 +12,10 @@ This is an R Markdown document. Markdown is a simple formatting syntax for autho
 When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
 ## Software Environment:
-The analysis was built using: 
-* R 3.2.4
-* data.table 1.9.6 
-
+The analysis was built using:  
+* R 3.2.4  
+* data.table 1.9.6  
+* readr 0.2.2
 
 ## Data Processing
 Loading data: readr's read_csv is used to load the data, as it is an order of magnitude faster than the base read.csv. Unfortunately, the data file crashes data.table 1.9.6's fread function.
@@ -93,12 +94,13 @@ StormSum2[EVTYPE == 'WET MICOBURST',  EVTYPE := 'WET MICROBURST']
 StormSum2[EVTYPE %like% '^WILD.*?FIRES*$', EVTYPE := 'WILDFIRE']
 StormSum2[EVTYPE %like% '^WI*NDS*$', EVTYPE := 'WIND']
 StormSum2[EVTYPE %like% 'WINTER WEATHER[ /]MIX', EVTYPE := 'WINTRY MIX']
-StormSum2[EVTYPE %like% 'WINTE?RY MIX', EVTYPE := 'WINTRY MIX']
+StormSum2[EVTYPE %like% 'WINT(E?RY?) MIX', EVTYPE := 'WINTRY MIX']
 StormSum2[EVTYPE %like% 'WINTER STORM[ /]HIGH WINDS*', EVTYPE := 'WINTER STORM HIGH WINDS']
 StormSum2[EVTYPE == 'WINTER STORMS', EVTYPE := 'WINTER STORM']
 StormSum2[EVTYPE %like% '^URBAN FLOOD[S|ING]*$', EVTYPE := 'URBAN FLOODING']
 StormSum2[EVTYPE %like% '^URBAN.*?[SMALL|SML].*?STREAM.*?[FLOOD|FLD]*', EVTYPE := 'URBAN SMALL STREAM FLOODING']
 StormSum2[EVTYPE == 'UNSEASONABLE COLD',  EVTYPE := 'UNSEASONABLY COLD']
+StormSum2[EVTYPE %like% '^UNSEASONABLY WARM[ &/]*WET', EVTYPE := 'UNSEASONABLY WARM WET']
 
 # Goal: THUNDERSTORM WIND. Lots of different patterns in Grep.
 # Starting with TH and ending in ND or DS or DSS or ND. or NDS or INS.
@@ -113,9 +115,17 @@ StormSum2[EVTYPE =='TUNDERSTORM WIND', EVTYPE := 'THUNDERSTORM WIND']
 StormSum2[EVTYPE %like% '^TSTM W.*?(ND$|DS$)', EVTYPE := 'THUNDERSTORM WIND']
 StormSum2[EVTYPE %like% '^TSTMW', EVTYPE := 'THUNDERSTORM WIND']
 
-# Ending with numbers
-StormSum2[EVTYPE %like% '^(TSTM|THUN).*?50$', EVTYPE := 'THUNDERSTORM WIND 50']
-StormSum2[EVTYPE %like% '^THUN.*?60$', EVTYPE := 'THUNDERSTROM WIND 60']
+# with numbers
+StormSum2[EVTYPE %like% '^(TSTM|THUN).*?40', EVTYPE := 'THUNDERSTORM WIND 40']
+StormSum2[EVTYPE %like% '^TSTM WIND.*?45', EVTYPE := 'THUNDERSTORM WIND 45']
+StormSum2[EVTYPE %like% '^(TSTM|THUN).*?50', EVTYPE := 'THUNDERSTORM WIND 50']
+StormSum2[EVTYPE %like% '^(TSTM|THUN).*?52', EVTYPE := 'THUNDERSTORM WIND 52']
+StormSum2[EVTYPE %like% '^(TSTM|THUN).*?53', EVTYPE := 'THUNDERSTORM WIND 53']
+StormSum2[EVTYPE %like% '^(TSTM|THUN).*?59', EVTYPE := 'THUNDERSTORM WIND 59']
+StormSum2[EVTYPE %like% '^THUN.*?60', EVTYPE := 'THUNDERSTORM WIND 60']
+StormSum2[EVTYPE %like% '^THUN.*?61', EVTYPE := 'THUNDERSTORM WIND 61']
+StormSum2[EVTYPE %like% '^(TSTM|THUN).*?65', EVTYPE := 'THUNDERSTORM WIND 65']
+
 
 # setkey(StormSum2, EVTYPE)
 # StormSum2[StormSum2[EVTYPE %like% '^TH.'][EVTYPE %like% 'ND$|DS$'], EVTYPE := 'THUNDERSTORM WINDS']
