@@ -28,6 +28,7 @@ dataset <- data.table(read_csv('../repdata-data-StormData.csv.bz2'))
 
 # Convert Property Damage Exponents to factors.
 dataset$PROPDMGEXP <- as.factor(dataset$PROPDMGEXP)
+levels(dataset$PROPDMGEXP)
 
 # Extract a summary of storm data events, a count of each EventType, and merge the two tables. EVCOUNT is forced to double precision, to suppress downstream warning messages from melt.data.table.
 # There is a bug in data.table 1.9.6. When merging the two tables keyed on the EVTYPE column, the merge function does not perfectly preserve the EVTYPE data. That is, 
