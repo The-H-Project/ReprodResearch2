@@ -26,8 +26,18 @@ require(data.table)
 require(readr)
 dataset <- data.table(read_csv('../repdata-data-StormData.csv.bz2'))
 
-# Convert Property Damage Exponents to factors.
+# Convert Property Damage Magnitude to factors, and check out the levels in this variable.
 dataset$PROPDMGEXP <- as.factor(dataset$PROPDMGEXP)
+levels(dataset$PROPDMGEXP)
+
+# Convert PROPDMG to dollars, based on the analysis at:
+# https://rstudio-pubs-static.s3.amazonaws.com/58957_37b6723ee52b455990e149edde45e5b6.html
+dataset[PROPDMGEXP == '+', PropertyDamage := PROPDMG]
+dataset[PROPDMGEXP %like% '\\d', PropertyDamage := PROPDMG * 10]
+dataset[PROPDMGEXP %like% 'H|h', PropertyDamage := PROPDMG * 100]
+dataset[PROPDMGEXP == 'K', PropertyDamage := PROPDMG * 1000]
+dataset[PROPDMGEXP %like% 'M|m', PropertyDamage := PROPDMG * 1000000]
+dataset[PROPDMGEXP == 'B', PropertyDamage := PROPDMG * 1000000000]
 
 # Extract a summary of storm data events, a count of each EventType, and merge the two tables. EVCOUNT is forced to double precision, to suppress downstream warning messages from melt.data.table.
 # There is a bug in data.table 1.9.6. When merging the two tables keyed on the EVTYPE column, the merge function does not perfectly preserve the EVTYPE data. That is, 
