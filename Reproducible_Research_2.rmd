@@ -7,27 +7,44 @@ output:
     keep_md: yes
 ---
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+# NOAA Storm Database Snapshot Analysis
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+This is an analysis of a snapshot of the U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database, from 18 April 1950 to 29 November 2011. This analysis is the second assignment in the Reproducible Research class. 
 
-## Software Environment:
-The analysis was built using:  
+## Software Environment and Data Files:
+This analysis was built using:  
 * R 3.2.4  
 * data.table 1.9.6  
 * readr 0.2.2
 
-## Data Processing
-Loading data: readr's read_csv is used to load the data, as it is an order of magnitude faster than the base read.csv. Unfortunately, the data file crashes data.table 1.9.6's fread function.
+The data used in this analysis is a snapshot located at:  
+https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2
 
-Summarizing data: For each Event Type, sum the fatalities, injuries, property damage, and crop damage.
-```{r load_data}
+Interpretation of the dataset variables, specifically the PROPDMGEXP and CROPDMGEXP fields, was informed by 'How To Handle Exponent Value of PROPDMGEXP and CROPDMGEXP' located at:  
+https://rstudio-pubs-static.s3.amazonaws.com/58957_37b6723ee52b455990e149edde45e5b6.html
+
+```{r required_packages}
 require(data.table)
 require(readr)
 require(lattice)
-dataset <- data.table(read_csv('../repdata-data-StormData.csv.bz2'))
+```
 
-# Convert Property Damage Magnitude to factors, and check out the levels in this variable.
+
+## Data Processing
+
+### Loading Data
+Unfortunately, the data file crashes data.table 1.9.6's fread function. readr's read_csv is used to load the data, as it is an order of magnitude faster than the base read.csv. 
+```{r load_data}
+dataset <- data.table(read_csv('../repdata-data-StormData.csv.bz2'))
+```
+
+### Processing Data
+The dataset needs some further processing before it may be used for analysis.
+
+#### PROPDMGEXP and CROPDMGEXP Fields
+The PROPDMGEXP and CROPDMGEXP fields are converted to a uniform number base (in dollars), as informed by 'How To Handle Exponent Value of PROPDMGEXP and CROPDMGEXP', as the value levels are not explained in NOAA's storm database documentation.
+
+```{r dmg_exp_fields}
 dataset$PROPDMGEXP <- as.factor(dataset$PROPDMGEXP)
 levels(dataset$PROPDMGEXP)
 
@@ -48,6 +65,15 @@ dataset[CROPDMGEXP == 'K', CropDamage := CROPDMG * 1000]
 dataset[CROPDMGEXP %like% 'M|m', CropDamage := CROPDMG * 10^6]
 dataset[CROPDMGEXP == 'B', CropDamage := CROPDMG * 10^9]
 
+```
+
+#### The EVTYPE field
+
+There are 977 different 'event types'. However, many of the 'event types' describe the same type of event, and only vary because of spelling, punctuation, and word order. For example, there are 
+
+```{r evtype_field}
+length(unique(dataset$EVTYPE))
+head(unique(dataset$EVTYPE),20)
 
 # Extract a summary of storm data events, a count of each EventType, and merge the two tables. EVCOUNT is forced to double precision, to suppress downstream warning messages from melt.data.table.
 # There is a bug in data.table 1.9.6. When merging the two tables keyed on the EVTYPE column, the merge function does not perfectly preserve the EVTYPE data. That is, 
