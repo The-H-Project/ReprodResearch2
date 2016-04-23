@@ -29,7 +29,6 @@ require(readr)
 require(lattice)
 ```
 
-
 ## Data Processing
 
 ### Loading Data
@@ -67,16 +66,20 @@ dataset[CROPDMGEXP == 'B', CropDamage := CROPDMG * 10^9]
 
 ```
 
-#### The EVTYPE field
+#### EVTYPE field
 
-There are 977 different 'event types'. However, many of the 'event types' describe the same type of event, and only vary because of spelling, punctuation, and word order. For example, there are 
+The dataset has huge number of unique 'event types': **`r length(unique(dataset$EVTYPE))`**
+
+However, many of the 'event types' describe the same type of event, and only vary because of spelling, punctuation, and word order.
+
+To reduce the variation in event types, we're going to:  
+* extract a summary table of event types with totals for Fatalities, Injuries, PropertyDamage, and CropDamage  
+* standardize the various event type names  
+* melt and re-cast the summary table which results in a smaller table with a reduced number of event types 
 
 ```{r evtype_field}
-length(unique(dataset$EVTYPE))
-head(unique(dataset$EVTYPE),20)
-
 # Extract a summary of storm data events, a count of each EventType, and merge the two tables. EVCOUNT is forced to double precision, to suppress downstream warning messages from melt.data.table.
-# There is a bug in data.table 1.9.6. When merging the two tables keyed on the EVTYPE column, the merge function does not perfectly preserve the EVTYPE data. That is, 
+# There is a bug in data.table 1.9.6. When merging the two tables keyed on the EVTYPE column, the merge function does not perfectly preserve the EVTYPE data. 
 StormSum1 <- dataset[, lapply(.SD, sum, na.rm=TRUE), by=EVTYPE, 
                      .SDcols=c('FATALITIES', 'INJURIES', 'PropertyDamage', 'CropDamage')]
 StormCount1 <- dataset[, .N, by = EVTYPE]
@@ -85,8 +88,10 @@ StormCount1$EVCOUNT <- as.double(StormCount1$EVCOUNT)
 StormSum2 <- StormSum1[StormCount1, on='EVTYPE']
 
 # Convert all EventTypes to upper case to reduce variation in Event Types
-# StormSum4 <- StormSum2 
 StormSum2[,EVTYPE := toupper(EVTYPE)]
+
+# Condense multiple spaces between words to one space between words
+StormSum2$EVTYPE <- gsub('\\s+', ' ', StormSum2$EVTYPE)
 
 # Get rid of spelling, punctuation, word order variations. Double escapes for literals are required because the regular expression is passed through data.table to grepl
 StormSum2[EVTYPE == 'AVALANCE',  EVTYPE := 'AVALANCHE']
@@ -95,13 +100,17 @@ StormSum2[EVTYPE %like% '^BLOWING SNOW[ &/-]*EXTREME', EVTYPE := 'BLOWING SNOW E
 StormSum2[EVTYPE %like% 'BLOW-OUT TIDE[S]*', EVTYPE := 'BLOWOUT TIDE']
 StormSum2[EVTYPE %like% '^BRUSH FIRE[S]*', EVTYPE := 'BRUSH FIRE']
 StormSum2[EVTYPE %like% '^COASTAL[ ]*FLOOD(ING)*$', EVTYPE := 'COASTAL FLOOD']
+StormSum2[EVTYPE %like% 'C(OA)*ST(A)*L[ ]*FLOODING/EROSION', EVTYPE := 'COASTAL FLOOD EROSION']
+StormSum2[EVTYPE %like% '^COASTAL[ ]*STORM', EVTYPE := 'COASTAL STORM']
+StormSum2[EVTYPE %like% 'COLD AIR FUNNEL[S]*', EVTYPE := 'COLD AIR FUNNEL']
 StormSum2[EVTYPE == 'COLD TEMPERATURES', EVTYPE := 'COLD TEMPERATURE']
 StormSum2[EVTYPE %like% 'DUST DEV[EI]L$', EVTYPE := 'DUST DEVIL']
+StormSum2[EVTYPE %like% 'EXTREME WIND[ ]*CHILL[S]*$', EVTYPE := 'EXTREME WIND CHILL']
 StormSum2[EVTYPE %like% 'FLOO*D[/]*FLASH', EVTYPE := 'FLASH FLOOD']
 StormSum2[EVTYPE %like% '^FLASH.*?FLOO[O]*D(S|ING)*$', EVTYPE := 'FLASH FLOOD']
 StormSum2[EVTYPE %like% '^FLASH FLOOD/$', EVTYPE := 'FLASH FLOOD']
 StormSum2[EVTYPE %like% '^FLOOD/FLASH', EVTYPE := 'FLASH FLOOD']
-StormSum2[EVTYPE %like% 'FLOOD FLASH', EVTYPE := 'FLASH FLODD']
+StormSum2[EVTYPE %like% 'FLOOD FLASH', EVTYPE := 'FLASH FLOOD']
 StormSum2[EVTYPE %like% '^FUNNEL CLOUD[\\.S]*$', EVTYPE := 'FUNNEL CLOUD']
 StormSum2[EVTYPE %like% 'FROST[/\\]FREEZE', EVTYPE := 'FROST FREEZE']
 StormSum2[EVTYPE %like% '^GRADIENT WIND[S]*$', EVTYPE := 'GRADIENT WIND']
@@ -120,6 +129,7 @@ StormSum2[EVTYPE %like% '^HEAVY RAIN[S]*$', EVTYPE := 'HEAVY RAIN']
 StormSum2[EVTYPE %like% '^HEAVY SHOWER[S]*$', EVTYPE := 'HEAVY SHOWER']
 StormSum2[EVTYPE %like% 'HEAVY SNOW[ /]*FREEZING RAIN', EVTYPE := 'HEAVY SNOW FREEZING RAIN']
 StormSum2[EVTYPE %like% '^HEAVY SNOW[- ]SQUALLS$', EVTYPE := 'HEAVY SNOW SQUALL']
+StormSum2[EVTYPE %like% '^HIGH WIND[S]*$', EVTYPE := 'HIGH WINDS']
 StormSum2[EVTYPE %like% '^LAKE[ -]*EFFECT SNOW', EVTYPE := 'LAKE EFFECT SNOW']
 StormSum2[EVTYPE %like% '^LANDSLIDE[S]*$', EVTYPE := 'LANDSLIDE']
 StormSum2[EVTYPE %like% '^LI.*?ING[\\.]*$', EVTYPE := 'LIGHTNING']
@@ -132,9 +142,12 @@ StormSum2[EVTYPE %like% '^FREEZING RAIN( AND |/)SLEET', EVTYPE := 'SLEET FREEZIN
 StormSum2[EVTYPE %like% '^SLEET[ &/]*FREEZING RAIN', EVTYPE := 'SLEET FREEZING RAIN']
 StormSum2[EVTYPE %like% '^SNOW[ /]*FREEZING RAIN', EVTYPE := 'SNOW FREEZING RAIN']
 StormSum2[EVTYPE %like% '^FREEZING RAIN( AND |/)SNOW', EVTYPE := 'SNOW FREEZING RAIN']
+StormSum2[EVTYPE %like% '^SNOW.*?ICE$', EVTYPE := 'SNOW ICE']
+StormSum2[EVTYPE %like% '^SNOW SQUALL[S]*', EVTYPE := 'SNOW SQUALL']
 StormSum2[EVTYPE %like% '^STRONG WIND[S]*$', EVTYPE := 'STRONG WIND']
 StormSum2[EVTYPE %like% '^TIDAL FLOOD(ING)*$', EVTYPE := 'TIDAL FLOOD']
 StormSum2[EVTYPE == 'TORNDAO',  EVTYPE := 'TORNADO']
+StormSum2[EVTYPE %like% '^TORNADO(ES|S)$', EVTYPE := 'TORNADO']
 StormSum2[EVTYPE %like% '^WATER *SPOUT[-/S]*$', EVTYPE := 'WATERSPOUT']
 StormSum2[EVTYPE == 'WAYTERSPOUT',  EVTYPE := 'WATERSPOUT']
 StormSum2[EVTYPE %like% '^WATERSPOUT[ /-]*TORNADO$', EVTYPE := 'WATERSPOUT TORNADO']
@@ -175,6 +188,9 @@ StormSum2[EVTYPE %like% '^THUN.*?60', EVTYPE := 'THUNDERSTORM WIND 60']
 StormSum2[EVTYPE %like% '^THUN.*?61', EVTYPE := 'THUNDERSTORM WIND 61']
 StormSum2[EVTYPE %like% '^(TSTM|THUN).*?65', EVTYPE := 'THUNDERSTORM WIND 65']
 
+# with hail
+StormSum2[EVTYPE %like% 'THUNDERSTORM WIND.*?HAIL', EVTYPE := 'THUNDERSTORM WIND HAIL']
+StormSum2[EVTYPE %like% '^TSTM WIND.*?HAIL', EVTYPE := 'THUNDERSTORM WIND HAIL']
 
 # setkey(StormSum2, EVTYPE)
 # StormSum2[StormSum2[EVTYPE %like% '^TH.'][EVTYPE %like% 'ND$|DS$'], EVTYPE := 'THUNDERSTORM WINDS']
