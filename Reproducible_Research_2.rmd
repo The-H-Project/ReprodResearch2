@@ -37,8 +37,8 @@ Unfortunately, the data file crashes data.table 1.9.6's fread function. readr's 
 dataset <- data.table(read_csv('../repdata-data-StormData.csv.bz2'))
 ```
 
-### Processing Data
-The dataset needs some further processing before it may be used for analysis.
+### Pre-Processing before Analysis
+The dataset needs some pre-processing before it may be used for analysis.
 
 #### PROPDMGEXP and CROPDMGEXP Fields
 The PROPDMGEXP and CROPDMGEXP fields are converted to a uniform number base (in dollars), as informed by 'How To Handle Exponent Value of PROPDMGEXP and CROPDMGEXP', as the value levels are not explained in NOAA's storm database documentation.
@@ -64,13 +64,19 @@ dataset[CROPDMGEXP == 'K', CropDamage := CROPDMG * 1000]
 dataset[CROPDMGEXP %like% 'M|m', CropDamage := CROPDMG * 10^6]
 dataset[CROPDMGEXP == 'B', CropDamage := CROPDMG * 10^9]
 
+# Sum CROPDMG and PROPDMG into TotalDamage. Not a simple addition formula because NAs will not properly sum. NA + 1 = NA, not 1.
+dataset[, TotalDamage := rowSums(.SD, na.rm = TRUE), .SDcols = c('PropertyDamage','CropDamage')]
+
+# Other
+dataset[,BeginDate := as.Date(dataset$BGN_DATE, format='%m/%d/%Y')]
+
 ```
 
 #### EVTYPE field
 
 The dataset has huge number of unique 'event types': **`r length(unique(dataset$EVTYPE))`**
 
-However, many of the 'event types' describe the same type of event, and only vary because of spelling, punctuation, and word order.
+Many 'event types' describe the same type of event, and only vary in spelling, punctuation, and word order.
 
 To reduce the variation in event types, we're going to:  
 * extract a summary table of event types with totals for Fatalities, Injuries, PropertyDamage, and CropDamage  
@@ -81,7 +87,7 @@ To reduce the variation in event types, we're going to:
 # Extract a summary of storm data events, a count of each EventType, and merge the two tables. EVCOUNT is forced to double precision, to suppress downstream warning messages from melt.data.table.
 # There is a bug in data.table 1.9.6. When merging the two tables keyed on the EVTYPE column, the merge function does not perfectly preserve the EVTYPE data. 
 StormSum1 <- dataset[, lapply(.SD, sum, na.rm=TRUE), by=EVTYPE, 
-                     .SDcols=c('FATALITIES', 'INJURIES', 'PropertyDamage', 'CropDamage')]
+             .SDcols=c('FATALITIES', 'INJURIES', 'PropertyDamage', 'CropDamage', 'TotalDamage')]
 StormCount1 <- dataset[, .N, by = EVTYPE]
 names(StormCount1)[2] <- 'EVCOUNT'
 StormCount1$EVCOUNT <- as.double(StormCount1$EVCOUNT)
@@ -128,8 +134,9 @@ StormSum2[EVTYPE %like% '^HEAVY .*?BLOWING.*?SNOW', EVTYPE := 'HEAVY BLOWING SNO
 StormSum2[EVTYPE %like% '^HEAVY RAIN[S]*$', EVTYPE := 'HEAVY RAIN']
 StormSum2[EVTYPE %like% '^HEAVY SHOWER[S]*$', EVTYPE := 'HEAVY SHOWER']
 StormSum2[EVTYPE %like% 'HEAVY SNOW[ /]*FREEZING RAIN', EVTYPE := 'HEAVY SNOW FREEZING RAIN']
+StormSum2[EVTYPE %like% '^HEAVY SNOW.*?ICE STORM', EVTYPE := 'HEAVY SNOW ICE STORM']
 StormSum2[EVTYPE %like% '^HEAVY SNOW[- ]SQUALLS$', EVTYPE := 'HEAVY SNOW SQUALL']
-StormSum2[EVTYPE %like% '^HIGH WIND[S]*$', EVTYPE := 'HIGH WINDS']
+StormSum2[EVTYPE %like% '^HIGH WIND[S/]*$', EVTYPE := 'HIGH WINDS']
 StormSum2[EVTYPE %like% '^LAKE[ -]*EFFECT SNOW', EVTYPE := 'LAKE EFFECT SNOW']
 StormSum2[EVTYPE %like% '^LANDSLIDE[S]*$', EVTYPE := 'LANDSLIDE']
 StormSum2[EVTYPE %like% '^LI.*?ING[\\.]*$', EVTYPE := 'LIGHTNING']
@@ -143,6 +150,7 @@ StormSum2[EVTYPE %like% '^SLEET[ &/]*FREEZING RAIN', EVTYPE := 'SLEET FREEZING R
 StormSum2[EVTYPE %like% '^SNOW[ /]*FREEZING RAIN', EVTYPE := 'SNOW FREEZING RAIN']
 StormSum2[EVTYPE %like% '^FREEZING RAIN( AND |/)SNOW', EVTYPE := 'SNOW FREEZING RAIN']
 StormSum2[EVTYPE %like% '^SNOW.*?ICE$', EVTYPE := 'SNOW ICE']
+StormSum2[EVTYPE %like% '^SNOW.*?ICE STORM', EVTYPE := 'SNOW ICE STORM']
 StormSum2[EVTYPE %like% '^SNOW SQUALL[S]*', EVTYPE := 'SNOW SQUALL']
 StormSum2[EVTYPE %like% '^STRONG WIND[S]*$', EVTYPE := 'STRONG WIND']
 StormSum2[EVTYPE %like% '^TIDAL FLOOD(ING)*$', EVTYPE := 'TIDAL FLOOD']
@@ -207,10 +215,31 @@ StormSum3 <- dcast(StormMelt, EVTYPE ~ DamageType, value.var = 'value', fun.aggr
 
 ```
 
-## 
+## Results
 
-```{r}
-barchart(EVTYPE ~ PropertyDamage, data=StormSum3, horizontal = TRUE)
+### Greatest Economic Consequences
+
+Select and graph the Top 25 event types for Total Damage. Change the scale from dollars to Billions of Dollars. Re-order the Event Type by Total Damage, so the barchart plots with greatest values first instead of alphabetically by Event Type, but graph Property Damage and Crop Damage.
+```{r TotalDamage}
+TotalDam25 <- head(StormSum3[order (-TotalDamage)], 25)
+TotalDam25[, TotalDamage := TotalDamage / 10^9]
+TotalDam25[, PropertyDamage := PropertyDamage / 10^9]
+TotalDam25[, CropDamage := CropDamage / 10^9]
+
+# Even though the data table is sorted by Total Damage descending, the setting will not hold for the graph. This reorder is specificaly done for the graph.
+TotalDam25$EVTYPE <- reorder(TotalDam25$EVTYPE, TotalDam25$TotalDamage) 
+
+barchart(EVTYPE ~ PropertyDamage + CropDamage, data=TotalDam25, horizontal = TRUE, stack = TRUE, 
+         xlim = c(0,160), main = 'Greatest Economic Consequences',
+         scales=list(cex=c(0.60,1), tick.number=8),
+         auto.key=list(space='top', columns=2, cex=0.75),
+         xlab=list(label='Total Damage in $ billions'))
+# barchart(EVTYPE ~ TotalDamage, data=TotalDam25, horizontal = TRUE)
 
 ```
+Per the graph, the event type with the greatest economic consequence is: **`r TotalDam25[,EVTYPE[1]]`**  
+
+Most of the economic damage sustained in the Top 25 event types is due to Property Damage. Drought and Extreme Cold seem to be the only event types where Crop Damage is greater than Property Damage.
+
+
 
