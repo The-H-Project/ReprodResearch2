@@ -1,17 +1,17 @@
 ---
 title: "Reproducible Research Assignment 2"
 author: "Project_H"
-date: "March 15, 2016"
+date: "24 April 2016"
 output: 
   html_document:
     keep_md: yes
 ---
 
-# NOAA Storm Database Snapshot Analysis
+# NOAA Storm Database Snapshot Analysis: Synopsis
 
-This is an analysis of a snapshot of the U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database, from 18 April 1950 to 29 November 2011. This analysis is the second assignment in the Reproducible Research class. 
+This is an analysis of a snapshot of the U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database, from 18 April 1950 to 29 November 2011. This analysis is the second assignment in the Reproducible Research class. From the data, we determined that the floods had the costliest economic consequences, while tornados caused the most fatalities and injuries.
 
-## Software Environment and Data Files:
+## Software Environment, Data Files, and External References:
 This analysis was built using:  
 * R 3.2.4  
 * data.table 1.9.6  
@@ -67,9 +67,6 @@ dataset[CROPDMGEXP == 'B', CropDamage := CROPDMG * 10^9]
 # Sum CROPDMG and PROPDMG into TotalDamage. Not a simple addition formula because NAs will not properly sum. NA + 1 = NA, not 1.
 dataset[, TotalDamage := rowSums(.SD, na.rm = TRUE), .SDcols = c('PropertyDamage','CropDamage')]
 
-# Other
-dataset[,BeginDate := as.Date(dataset$BGN_DATE, format='%m/%d/%Y')]
-
 ```
 
 #### EVTYPE field
@@ -80,10 +77,12 @@ Many 'event types' describe the same type of event, and only vary in spelling, p
 
 To reduce the variation in event types, we're going to:  
 * extract a summary table of event types with totals for Fatalities, Injuries, PropertyDamage, and CropDamage  
-* standardize the various event type names  
+* standardize the various event type names, where possible 
 * melt and re-cast the summary table which results in a smaller table with a reduced number of event types 
 
-```{r evtype_field}
+This is not a perfect method of reducing Event Type variation, as some 700+ event types still exist after name standardization. In part this is due to Event Types that include multiple phenomenona which may not be equivalent. For example, 'BEACH EROSION/COASTAL FLOOD' may not be equivalent to 'COASTAL FLOOD AND EROSION'.
+
+```{r evtype_standardization}
 # Extract a summary of storm data events, a count of each EventType, and merge the two tables. EVCOUNT is forced to double precision, to suppress downstream warning messages from melt.data.table.
 # There is a bug in data.table 1.9.6. When merging the two tables keyed on the EVTYPE column, the merge function does not perfectly preserve the EVTYPE data. 
 StormSum1 <- dataset[, lapply(.SD, sum, na.rm=TRUE), by=EVTYPE, 
@@ -106,7 +105,8 @@ StormSum2[EVTYPE %like% '^BLOWING SNOW[ &/-]*EXTREME', EVTYPE := 'BLOWING SNOW E
 StormSum2[EVTYPE %like% 'BLOW-OUT TIDE[S]*', EVTYPE := 'BLOWOUT TIDE']
 StormSum2[EVTYPE %like% '^BRUSH FIRE[S]*', EVTYPE := 'BRUSH FIRE']
 StormSum2[EVTYPE %like% '^COASTAL[ ]*FLOOD(ING)*$', EVTYPE := 'COASTAL FLOOD']
-StormSum2[EVTYPE %like% 'C(OA)*ST(A)*L[ ]*FLOODING/EROSION', EVTYPE := 'COASTAL FLOOD EROSION']
+StormSum2[EVTYPE %like% 'C(OA)*ST(A)*L[ ]*FLOODING/EROSION', EVTYPE := 'COASTAL FLOOD AND EROSION']
+StormSum2[EVTYPE == 'EROSION/CSTL FLOOD', EVTYPE := 'COASTAL FLOOD AND EROSION']
 StormSum2[EVTYPE %like% '^COASTAL[ ]*STORM', EVTYPE := 'COASTAL STORM']
 StormSum2[EVTYPE %like% 'COLD AIR FUNNEL[S]*', EVTYPE := 'COLD AIR FUNNEL']
 StormSum2[EVTYPE == 'COLD TEMPERATURES', EVTYPE := 'COLD TEMPERATURE']
@@ -115,8 +115,7 @@ StormSum2[EVTYPE %like% 'EXTREME WIND[ ]*CHILL[S]*$', EVTYPE := 'EXTREME WIND CH
 StormSum2[EVTYPE %like% 'FLOO*D[/]*FLASH', EVTYPE := 'FLASH FLOOD']
 StormSum2[EVTYPE %like% '^FLASH.*?FLOO[O]*D(S|ING)*$', EVTYPE := 'FLASH FLOOD']
 StormSum2[EVTYPE %like% '^FLASH FLOOD/$', EVTYPE := 'FLASH FLOOD']
-StormSum2[EVTYPE %like% '^FLOOD/FLASH', EVTYPE := 'FLASH FLOOD']
-StormSum2[EVTYPE %like% 'FLOOD FLASH', EVTYPE := 'FLASH FLOOD']
+StormSum2[EVTYPE %like% 'FLOOD[ /]FLASH', EVTYPE := 'FLASH FLOOD']
 StormSum2[EVTYPE %like% '^FUNNEL CLOUD[\\.S]*$', EVTYPE := 'FUNNEL CLOUD']
 StormSum2[EVTYPE %like% 'FROST[/\\]FREEZE', EVTYPE := 'FROST FREEZE']
 StormSum2[EVTYPE %like% '^GRADIENT WIND[S]*$', EVTYPE := 'GRADIENT WIND']
@@ -169,6 +168,7 @@ StormSum2[EVTYPE %like% 'WINTER STORM[ /]HIGH WINDS*', EVTYPE := 'WINTER STORM H
 StormSum2[EVTYPE == 'WINTER STORMS', EVTYPE := 'WINTER STORM']
 StormSum2[EVTYPE %like% '^URBAN FLOOD[S|ING]*$', EVTYPE := 'URBAN FLOODING']
 StormSum2[EVTYPE %like% '^URBAN.*?[SMALL|SML].*?STREAM.*?[FLOOD|FLD]*', EVTYPE := 'URBAN SMALL STREAM FLOODING']
+StormSum2[EVTYPE %like% 'SMALL STREAM.*?URBAN FLOOD', EVTYPE := 'URBAN SMALL STREAM FLOODING']
 StormSum2[EVTYPE == 'UNSEASONABLE COLD',  EVTYPE := 'UNSEASONABLY COLD']
 StormSum2[EVTYPE %like% '^UNSEASONABLY WARM[ &/]*WET', EVTYPE := 'UNSEASONABLY WARM WET']
 
@@ -200,12 +200,9 @@ StormSum2[EVTYPE %like% '^(TSTM|THUN).*?65', EVTYPE := 'THUNDERSTORM WIND 65']
 StormSum2[EVTYPE %like% 'THUNDERSTORM WIND.*?HAIL', EVTYPE := 'THUNDERSTORM WIND HAIL']
 StormSum2[EVTYPE %like% '^TSTM WIND.*?HAIL', EVTYPE := 'THUNDERSTORM WIND HAIL']
 
-# setkey(StormSum2, EVTYPE)
-# StormSum2[StormSum2[EVTYPE %like% '^TH.'][EVTYPE %like% 'ND$|DS$'], EVTYPE := 'THUNDERSTORM WINDS']
-# Starting with TH and ending in IND or INS
-# StormSum1[EVTYPE %like% '^TH.*IND$|^TH.*INS$', EVTYPE := 'THUNDERSTORM WINDS']
-# Starting with TH and ending in NDS. or ND.
-# StormSum1[EVTYPE %like% '^TH.*NDS\\.$|^TH.*ND\\.$', EVTYPE := 'THUNDERSTORM WINDS']
+# other
+StormSum2[EVTYPE %like% 'THUNDERSTORM WIND.*?TREE[S]*', EVTYPE := 'THUNDERSTORM WIND TREES']
+
 
 # Melt the summary to prepare for re-calculating the sums for each Event Type.
 StormMelt <- melt.data.table(StormSum2, id.vars = 'EVTYPE', variable.name = 'DamageType')
@@ -217,29 +214,82 @@ StormSum3 <- dcast(StormMelt, EVTYPE ~ DamageType, value.var = 'value', fun.aggr
 
 ## Results
 
-### Greatest Economic Consequences
+### Events with Greatest Economic Consequences
 
-Select and graph the Top 25 event types for Total Damage. Change the scale from dollars to Billions of Dollars. Re-order the Event Type by Total Damage, so the barchart plots with greatest values first instead of alphabetically by Event Type, but graph Property Damage and Crop Damage.
-```{r TotalDamage}
-TotalDam25 <- head(StormSum3[order (-TotalDamage)], 25)
-TotalDam25[, TotalDamage := TotalDamage / 10^9]
-TotalDam25[, PropertyDamage := PropertyDamage / 10^9]
-TotalDam25[, CropDamage := CropDamage / 10^9]
+We will define 'Economic Consequences' as the sum of Property Damage and Crop Damage. We'll select and graph the Top 25 event types for Total Damage. 
 
-# Even though the data table is sorted by Total Damage descending, the setting will not hold for the graph. This reorder is specificaly done for the graph.
-TotalDam25$EVTYPE <- reorder(TotalDam25$EVTYPE, TotalDam25$TotalDamage) 
+```{r EconomicDamage}
+# Select the Top 25 event types by Total Damage descending, and reduce the scale from dollars to Billions of Dollars.
+EconDam25 <- head(StormSum3[order (-TotalDamage)], 25)
+EconDam25[, TotalDamage := TotalDamage / 10^9]
+EconDam25[, PropertyDamage := PropertyDamage / 10^9]
+EconDam25[, CropDamage := CropDamage / 10^9]
 
-barchart(EVTYPE ~ PropertyDamage + CropDamage, data=TotalDam25, horizontal = TRUE, stack = TRUE, 
-         xlim = c(0,160), main = 'Greatest Economic Consequences',
+# Even though the data table is sorted by Total Damage descending, the setting will not hold for the graph. This reorder is specifically done for the graph, so that barchart plots with greatest Total Damage values descending, instead of being graphed alphabetically by Event Type.
+EconDam25$EVTYPE <- reorder(EconDam25$EVTYPE, EconDam25$TotalDamage) 
+
+barchart(EVTYPE ~ PropertyDamage + CropDamage, data=EconDam25, horizontal = TRUE, stack = TRUE, 
+         xlim = c(0,160), main = 'Economic Consequences of Storms: Top 25 Event Types',
          scales=list(cex=c(0.60,1), tick.number=8),
          auto.key=list(space='top', columns=2, cex=0.75),
          xlab=list(label='Total Damage in $ billions'))
-# barchart(EVTYPE ~ TotalDamage, data=TotalDam25, horizontal = TRUE)
+
+# List the Top 5 (for brevity) Event Types for Total Damage.
+EconDam25[1:5, .(EVTYPE, TotalDamage = prettyNum(TotalDamage, small.mark = '.', digits=4, width=5))]
 
 ```
-Per the graph, the event type with the greatest economic consequence is: **`r TotalDam25[,EVTYPE[1]]`**  
-
-Most of the economic damage sustained in the Top 25 event types is due to Property Damage. Drought and Extreme Cold seem to be the only event types where Crop Damage is greater than Property Damage.
 
 
+Per the graph, the event type with the greatest economic consequence is: **`r EconDam25[,EVTYPE[1]]`**
 
+The Event Type of second-great economic consequence is: **`r EconDam25[,EVTYPE[2]]`**
+
+Most of the economic damage from sustained in the Top 25 event types is Property Damage. Floods cause the most economic damage, followed distantly by 'Hurricane/Typhoon' events.
+
+Drought, Ice Storms, Extreme Cold, and Frost Freeze seem to be the only event types where Crop Damage is greater than Property Damage.
+
+A potential issue is that these financial numbers may not have been indexed for inflation.
+
+
+### Events with Greatest Impact on Population Health
+
+There does not seem to be a standard single 'rating' of Population Health Impact based on fatalities and injuries. As a result, we will report on both separately.
+
+```{r Fatalities}
+Fatal25 <- head(StormSum3[order (-FATALITIES)], 25)
+
+# Reorder by Event Type by fatalities for the graph, otherwise the graph will be presented by Event Type, in an alphabetical descending manner.
+Fatal25$EVTYPE <- reorder(Fatal25$EVTYPE, Fatal25$FATALITIES) 
+
+barchart(EVTYPE ~ FATALITIES, data=Fatal25, horizontal = TRUE, 
+         main = 'Storm Fatalities: Top 25 Event Types',
+         scales=list(cex=c(0.60,1), tick.number=14),
+         xlab=list(label='Number of Fatalities'))
+
+# List the Top 5 (for brevity) Event Types for fatalities.
+Fatal25[1:5, .(EVTYPE, Fatalities = prettyNum(FATALITIES, big.mark = ','))]
+
+```
+
+The Event Type with the most fatalities is: **`r Fatal25[,EVTYPE[1]]`**
+
+The Event Type with the second-most fatalities is: **`r Fatal25[,EVTYPE[2]]`**
+
+
+```{r Injuries}
+Injury25 <- head(StormSum3[order (-INJURIES)], 25)
+Injury25$EVTYPE <- reorder(Injury25$EVTYPE, Injury25$INJURIES) 
+
+barchart(EVTYPE ~ INJURIES, data=Injury25, horizontal = TRUE,  
+         main = 'Storm Injuries: Top 25 Event Types',
+         scales=list(cex=c(0.60,1), tick.number=10),
+         xlab=list(label='Number of Injuries'))
+
+# List the Top 5 (for brevity) Event Types for injuries.
+Injury25[1:5, .(EVTYPE, Injuries = prettyNum(INJURIES, big.mark= ','))]
+
+```
+
+The Event Type with the most injuries is: **`r Injury25[,EVTYPE[1]]`**
+
+The Event Type with the second-most injuries is: **`r Injury25[,EVTYPE[2]]`**
